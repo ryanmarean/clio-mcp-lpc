@@ -437,6 +437,7 @@ All settings are passed as environment variables (in your Claude Desktop config 
 | `MCP_BASE_URL` | HTTP mode | — | Public base URL of this server (e.g. `http://127.0.0.1:3000`). Used for the OAuth redirect |
 | `PORT` | No | `3000` | HTTP listen port (HTTP mode only) |
 | `MCP_API_KEY` | No | — | If set, the HTTP server requires this bearer token in the `Authorization` header. Recommended for any non-localhost deployment |
+| `SESSION_IDLE_TIMEOUT_HOURS` | No | `720` (30 days) | HTTP mode only. How long an idle session (no requests) is kept in memory, holding that connection's Clio tokens, before it's reclaimed and the next request has to re-authenticate. Sessions are evicted by inactivity, not age — an actively-used session is never force-closed regardless of how old it is. Lower this if you'd rather force more frequent re-authentication than keep dormant sessions' tokens in memory longer |
 | `ENCRYPTION_KEY` | No | auto-generated | Overrides OS keychain. Required only for CI/headless installs where no keychain is available. Must be a 64-character hex string. |
 | `CLIO_REDIRECT_PORT` | No | `5678` | Local port for the OAuth callback (stdio mode). Change if 5678 is in use on your machine |
 | `CLIO_REGION` | No | `us` | `us` or `eu`. Controls the default Clio API and auth base URLs |
