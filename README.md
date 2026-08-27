@@ -178,6 +178,15 @@ Once connected, you can ask Claude things like:
 - *"What's the user ID for Jane Smith?"*
 - *"Show me all staff members"*
 
+**Communications**
+- *"Show me all emails logged on matter 4821"*
+- *"Log a call I just had with the client about the settlement offer"*
+
+**Custom fields**
+- *"What custom fields do we track on matters?"*
+- *"What's the referral source on matter 4821?"*
+- *"Set the referral source on matter 4821 to 'Existing Client'"*
+
 The connector retrieves live data from Clio on every request. Nothing is cached or stored by the AI.
 
 ---
@@ -405,6 +414,21 @@ Claude selects and calls these tools automatically based on your questions. You 
 |---|---|---|
 | `list_users` | `name`, `subscription_type` (attorney/nonattorney), `enabled`, `limit` | Lists firm users with their IDs |
 | `get_user` | `user_id` | Returns detail for a single user by ID |
+
+### Communications (2 tools)
+
+| Tool | Inputs | What it does |
+|---|---|---|
+| `list_communications` | `matter_id`, `contact_id`, `type` (Email/Phone), `query`, `date_start`, `date_end`, `limit`, `page_token` | Lists/searches logged communications (emails, calls) with optional filters; returns a paginated envelope with `total_count`, `has_more`, and `next_page_token` |
+| `create_communication` | `type` (Email/Phone), `subject`, `body`, `received_at`, `matter_id`, `sender_contact_ids`, `receiver_contact_ids` | Logs a new communication, optionally attached to a matter and Contact senders/receivers |
+
+### Custom fields (3 tools)
+
+| Tool | Inputs | What it does |
+|---|---|---|
+| `list_custom_fields` | `parent_type` (Matter/Contact), `field_type`, `query`, `limit`, `page_token` | Lists custom field definitions configured in Clio, including picklist options |
+| `get_custom_field_values` | `parent_type` (Matter/Contact), `parent_id` | Returns the current custom field values on a matter or contact |
+| `set_custom_field_values` | `parent_type` (Matter/Contact), `parent_id`, `values` (array of `custom_field_id`/`value`) | Sets one or more custom field values on a matter or contact |
 
 ### Audit log (1 tool)
 
