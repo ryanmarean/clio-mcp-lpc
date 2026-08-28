@@ -33,6 +33,8 @@ async function main() {
         const { registerNoteTools } = await import("./tools/notes.js");
         const { registerUserTools } = await import("./tools/users.js");
         const { registerAuditExportTool } = await import("./tools/auditExport.js");
+        const { registerCommunicationTools } = await import("./tools/communications.js");
+        const { registerCustomFieldTools } = await import("./tools/customFields.js");
 
         const server = new McpServer({ name: "clio-mcp", version: pkg.version });
         registerAuthTools(server);
@@ -47,6 +49,8 @@ async function main() {
         registerNoteTools(server);
         registerUserTools(server);
         registerAuditExportTool(server);
+        registerCommunicationTools(server);
+        registerCustomFieldTools(server);
 
         const transport = new StdioServerTransport();
         await server.connect(transport);
