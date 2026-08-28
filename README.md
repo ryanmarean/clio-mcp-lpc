@@ -180,6 +180,15 @@ Once connected, you can ask Claude things like:
 - *"What's the user ID for Jane Smith?"*
 - *"Show me all staff members"*
 
+**Communications**
+- *"Show me all emails logged on matter 4821"*
+- *"Log a call I just had with the client about the settlement offer"*
+
+**Custom fields**
+- *"What custom fields do we track on matters?"*
+- *"What's the referral source on matter 4821?"*
+- *"Set the referral source on matter 4821 to 'Existing Client'"*
+
 The connector retrieves live data from Clio on every request. Nothing is cached or stored by the AI.
 
 ---
@@ -414,6 +423,21 @@ Claude selects and calls these tools automatically based on your questions. You 
 | `list_users` | `name`, `subscription_type` (attorney/nonattorney), `enabled`, `limit` | Lists firm users with their IDs |
 | `get_user` | `user_id` | Returns detail for a single user by ID |
 
+### Communications (2 tools)
+
+| Tool | Inputs | What it does |
+|---|---|---|
+| `list_communications` | `matter_id`, `contact_id`, `type` (Email/Phone), `query`, `date_start`, `date_end`, `limit`, `page_token` | Lists/searches logged communications (emails, calls) with optional filters; returns a paginated envelope with `total_count`, `has_more`, and `next_page_token` |
+| `create_communication` | `type` (Email/Phone), `subject`, `body`, `received_at`, `matter_id`, `sender_contact_ids`, `receiver_contact_ids` | Logs a new communication, optionally attached to a matter and Contact senders/receivers |
+
+### Custom fields (3 tools)
+
+| Tool | Inputs | What it does |
+|---|---|---|
+| `list_custom_fields` | `parent_type` (Matter/Contact), `field_type`, `query`, `limit`, `page_token` | Lists custom field definitions configured in Clio, including picklist options |
+| `get_custom_field_values` | `parent_type` (Matter/Contact), `parent_id` | Returns the current custom field values on a matter or contact |
+| `set_custom_field_values` | `parent_type` (Matter/Contact), `parent_id`, `values` (array of `custom_field_id`/`value`) | Sets one or more custom field values on a matter or contact |
+
 ### Audit log (1 tool)
 
 | Tool | Inputs | What it does |
@@ -446,6 +470,7 @@ All settings are passed as environment variables (in your Claude Desktop config 
 | `PORT` | No | `3000` | HTTP listen port (HTTP mode only) |
 | `MCP_API_KEY` | HTTP mode | (none) | Bearer token every client must send in the `Authorization` header. Required in HTTP mode, minimum 24 characters; the server refuses to start without it. Generate with `openssl rand -hex 32` |
 | `MCP_ALLOW_UNAUTHENTICATED` | No | `false` | Local development only. `true` lets the HTTP server start without `MCP_API_KEY` and prints a warning at startup. Never set this on a public host |
+| `SESSION_IDLE_TIMEOUT_HOURS` | No | `720` (30 days) | HTTP mode only. How long an idle session (no requests) is kept in memory, holding that connection's Clio tokens, before it's reclaimed and the next request has to re-authenticate. Sessions are evicted by inactivity, not age — an actively-used session is never force-closed regardless of how old it is. Lower this if you'd rather force more frequent re-authentication than keep dormant sessions' tokens in memory longer |
 | `ENCRYPTION_KEY` | No | auto-generated | Overrides OS keychain. Required only for CI/headless installs where no keychain is available. Must be a 64-character hex string. |
 | `CLIO_REDIRECT_PORT` | No | `5678` | Local port for the OAuth callback (stdio mode). Change if 5678 is in use on your machine |
 | `CLIO_REGION` | No | `us` | Clio data region: `us`, `eu`, `au`, or `ca`. Controls the default Clio API and OAuth base URLs. Set at Clio account creation; must match the server your firm logs in to. Any other value stops startup with an error |

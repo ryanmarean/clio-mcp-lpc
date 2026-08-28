@@ -17,6 +17,8 @@ import { registerBillingTools } from "../tools/billing.js";
 import { registerNoteTools } from "../tools/notes.js";
 import { registerUserTools } from "../tools/users.js";
 import { registerAuditExportTool } from "../tools/auditExport.js";
+import { registerCommunicationTools } from "../tools/communications.js";
+import { registerCustomFieldTools } from "../tools/customFields.js";
 import { buildAuthorizationUrl, exchangeCodeForTokensPure, refreshTokensPure } from "../auth/oauth.js";
 import type { ClioTokens } from "../auth/oauth.js";
 import { sessionStorage, SessionContext } from "../utils/sessionContext.js";
@@ -31,9 +33,21 @@ interface SessionRecord {
   tokens: ClioTokens | null;
   pendingOAuthNonce: string | null;
   createdAt: number;
+  lastActivityAt: number;
 }
 
 const sessions = new Map<string, SessionRecord>();
+
+// How long a session may sit idle before the GC sweep reclaims it. Defaults to
+// 30 days so an actively-used connection never gets force-logged-out just for
+// being old — only for going quiet. Exported for testing.
+export const SESSION_IDLE_TIMEOUT_MS =
+  (Number(process.env.SESSION_IDLE_TIMEOUT_HOURS) || 720) * 60 * 60 * 1000;
+
+// Exported for testing.
+export function isSessionStale(record: Pick<SessionRecord, "lastActivityAt">, now: number, idleTimeoutMs: number): boolean {
+  return record.lastActivityAt < now - idleTimeoutMs;
+}
 
 function createMcpServer(): McpServer {
   const server = new McpServer({ name: "clio-mcp", version: pkg.version });
@@ -49,6 +63,8 @@ function createMcpServer(): McpServer {
   registerNoteTools(server);
   registerUserTools(server);
   registerAuditExportTool(server);
+  registerCommunicationTools(server);
+  registerCustomFieldTools(server);
   return server;
 }
 
@@ -75,11 +91,11 @@ function buildSessionContext(record: SessionRecord, sessionId: string): SessionC
   };
 }
 
-// Stale session GC: remove sessions older than 24 hours
+// Stale session GC: remove sessions idle longer than SESSION_IDLE_TIMEOUT_MS
 setInterval(() => {
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const now = Date.now();
   for (const [id, rec] of sessions) {
-    if (rec.createdAt < cutoff) {
+    if (isSessionStale(rec, now, SESSION_IDLE_TIMEOUT_MS)) {
       rec.transport.close().catch(() => {});
       sessions.delete(id);
     }
@@ -107,12 +123,14 @@ export function createApp(auth: HttpAuthConfig): express.Express {
 
       if (!incomingSessionId) {
         // New connection: allocate record and create transport
+        const now = Date.now();
         const record: SessionRecord = {
           transport: null!,
           mcpServer: null,
           tokens: null,
           pendingOAuthNonce: null,
-          createdAt: Date.now(),
+          createdAt: now,
+          lastActivityAt: now,
         };
 
         const transport = new StreamableHTTPServerTransport({
@@ -149,6 +167,7 @@ export function createApp(auth: HttpAuthConfig): express.Express {
           res.status(404).json({ error: "Session not found" });
           return;
         }
+        record.lastActivityAt = Date.now();
         const ctx = buildSessionContext(record, incomingSessionId);
         await sessionStorage.run(ctx, () =>
           record.transport.handleRequest(req, res, req.body)
